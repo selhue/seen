@@ -64,29 +64,22 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
+  
   function parseChatFromURLPath() {
-    const path = decodeURIComponent(window.location.pathname);
-    const cleaned = path.replace(/^\/+/, "").replace(/^seen\/?/, ""); // remove /seen/
-    
-    const markers = cleaned.matchAll(/(me|oth)\./gi);
-    const indices = Array.from(markers, m => ({ who: m[1].toLowerCase(), index: m.index }));
+  const path = decodeURIComponent(window.location.pathname);
+  const cleaned = path
+    .replace(/^\/+/, "")      // remove leading slash
+    .replace(/^seen\/?/, "")  // remove 'seen/'
+    .trim();                  // remove any accidental leading/trailing space
 
-    const messages = [];
+  const pattern = /(me|oth)\.([\s\S]*?)(?=(?:me\.|oth\.|$))/gi;
+  const matches = [...cleaned.matchAll(pattern)];
 
-    for (let i = 0; i < indices.length; i++) {
-      const current = indices[i];
-      const next = indices[i + 1];
-
-      const start = current.index + current.who.length + 1; // skip "me." or "oth."
-      const end = next ? next.index : cleaned.length;
-
-      const text = cleaned.slice(start, end).trim();
-      if (text.length > 0) {
-        messages.push({ who: current.who, msg: text });
-      }
-    }
-
-    return messages;
+  return matches.map(match => {
+    const who = match[1].toLowerCase();
+    const msg = match[2].trim();
+    return { who, msg };
+  }).filter(entry => entry.msg.length > 0); // skip empties
   }
 
   function renderChat(messages) {
