@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Messenger Chat Renderer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+    .chat-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .message {
+      display: flex;
+      margin: 10px 0;
+      position: relative;
+      flex-direction: column;
+    }
+    .me {
+      align-items: flex-end;
+    }
+    .oth {
+      align-items: flex-start;
+    }
+    .bubble {
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 70%;
+      font-size: 16px;
+      word-wrap: break-word;
+    }
+    .me .bubble {
+      background-color: #0084ff;
+      color: white;
+      border-bottom-right-radius: 2px;
+    }
+    .oth .bubble {
+      background-color: #f1f0f0;
+      color: black;
+      border-bottom-left-radius: 2px;
+    }
+    .seen {
+      font-size: 12px;
+      color: gray;
+      margin-top: 4px;
+      padding-left: 5px;
+    }
+    .me .seen {
+      text-align: right;
+      padding-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat" class="chat-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    function parseChatFromURLPath() {
+      const path = decodeURIComponent(window.location.pathname); // e.g. /me.hello oth.hi me.okay
+      const trimmed = path.replace(/^\/+/, ""); // remove leading slash
+      const regex = /(me|oth)\.([\s\S]*?)(?=(?: me\.| oth\.|$))/gi;
+      const matches = [...trimmed.matchAll(regex)];
+
+      return matches.map(match => ({
+        who: match[1].toLowerCase(),
+        msg: match[2].trim()
+      }));
+    }
+
+    function renderChat(messages) {
+      const container = document.getElementById("chat");
+      container.innerHTML = messages.map((msg, i) => {
+        const isLast = i === messages.length - 1;
+        return `
+          <div class="message ${msg.who}">
+            <div class="bubble">${msg.msg}</div>
+            ${isLast ? '<div class="seen">Seen by Selhue</div>' : ''}
+          </div>
+        `;
+      }).join("");
+    }
+
+    function downloadChatImage() {
+      const chatDiv = document.getElementById("chat");
+      html2canvas(chatDiv).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "chat.png";
+        link.href = canvas.toDataURL();
+        link.click();
+        setTimeout(() => window.close(), 1000);
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const messages = parseChatFromURLPath();
+      if (messages.length) {
+        renderChat(messages);
+        setTimeout(downloadChatImage, 300);
+      }
+    });
+  </script>
+</body>
+</html>
