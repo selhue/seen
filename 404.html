@@ -63,50 +63,55 @@
   <div id="chat" class="chat-container"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script>
-    function parseChatFromURLPath() {
-      const path = decodeURIComponent(window.location.pathname); // e.g. /me.hello oth.hi me.okay
-      const trimmed = path.replace(/^\/+/, ""); // remove leading slash
-      const regex = /(me|oth)\.([\s\S]*?)(?=(?: me\.| oth\.|$))/gi;
-      const matches = [...trimmed.matchAll(regex)];
+<script>
+  function parseChatFromURLPath() {
+    const path = decodeURIComponent(window.location.pathname);
+    const trimmed = path.replace(/^\/+/, "").replace(/^seen\/?/, ""); // remove leading slash + 'seen/'
+    
+    // Fix: replace multiple spaces and handle breaks
+    const parts = trimmed.match(/(me|oth)\.([\s\S]*?)(?=(?: me\.| oth\.|$))/gi);
 
-      return matches.map(match => ({
-        who: match[1].toLowerCase(),
-        msg: match[2].trim()
-      }));
-    }
+    if (!parts) return [];
 
-    function renderChat(messages) {
-      const container = document.getElementById("chat");
-      container.innerHTML = messages.map((msg, i) => {
-        const isLast = i === messages.length - 1;
-        return `
-          <div class="message ${msg.who}">
-            <div class="bubble">${msg.msg}</div>
-            ${isLast ? '<div class="seen">Seen by Selhue</div>' : ''}
-          </div>
-        `;
-      }).join("");
-    }
-
-    function downloadChatImage() {
-      const chatDiv = document.getElementById("chat");
-      html2canvas(chatDiv).then(canvas => {
-        const link = document.createElement("a");
-        link.download = "chat.png";
-        link.href = canvas.toDataURL();
-        link.click();
-        setTimeout(() => window.close(), 1000);
-      });
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const messages = parseChatFromURLPath();
-      if (messages.length) {
-        renderChat(messages);
-        setTimeout(downloadChatImage, 300);
-      }
+    return parts.map(part => {
+      const splitIndex = part.indexOf('.');
+      const who = part.slice(0, splitIndex).toLowerCase();
+      const msg = part.slice(splitIndex + 1).trim();
+      return { who, msg };
     });
-  </script>
+  }
+
+  function renderChat(messages) {
+    const container = document.getElementById("chat");
+    container.innerHTML = messages.map((msg, i) => {
+      const isLast = i === messages.length - 1;
+      return `
+        <div class="message ${msg.who}">
+          <div class="bubble">${msg.msg}</div>
+          ${isLast ? '<div class="seen">Seen by Selhue</div>' : ''}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function downloadChatImage() {
+    const chatDiv = document.getElementById("chat");
+    html2canvas(chatDiv).then(canvas => {
+      const link = document.createElement("a");
+      link.download = "chat.png";
+      link.href = canvas.toDataURL();
+      link.click();
+      setTimeout(() => window.close(), 1000);
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const messages = parseChatFromURLPath();
+    if (messages.length) {
+      renderChat(messages);
+      setTimeout(downloadChatImage, 300);
+    }
+  });
+</script>
 </body>
 </html>
