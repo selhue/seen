@@ -66,19 +66,27 @@
 <script>
   function parseChatFromURLPath() {
     const path = decodeURIComponent(window.location.pathname);
-    const trimmed = path.replace(/^\/+/, "").replace(/^seen\/?/, ""); // remove leading slash + 'seen/'
+    const cleaned = path.replace(/^\/+/, "").replace(/^seen\/?/, ""); // remove /seen/
     
-    // Fix: replace multiple spaces and handle breaks
-    const parts = trimmed.match(/(me|oth)\.([\s\S]*?)(?=(?: me\.| oth\.|$))/gi);
+    const markers = cleaned.matchAll(/(me|oth)\./gi);
+    const indices = Array.from(markers, m => ({ who: m[1].toLowerCase(), index: m.index }));
 
-    if (!parts) return [];
+    const messages = [];
 
-    return parts.map(part => {
-      const splitIndex = part.indexOf('.');
-      const who = part.slice(0, splitIndex).toLowerCase();
-      const msg = part.slice(splitIndex + 1).trim();
-      return { who, msg };
-    });
+    for (let i = 0; i < indices.length; i++) {
+      const current = indices[i];
+      const next = indices[i + 1];
+
+      const start = current.index + current.who.length + 1; // skip "me." or "oth."
+      const end = next ? next.index : cleaned.length;
+
+      const text = cleaned.slice(start, end).trim();
+      if (text.length > 0) {
+        messages.push({ who: current.who, msg: text });
+      }
+    }
+
+    return messages;
   }
 
   function renderChat(messages) {
