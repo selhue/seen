@@ -1,133 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta charset="UTF-8">
-          <meta http-equiv="X-UA-Compatible" content="IE=edge">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messenger Chat Renderer</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .chat-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #fff;
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    
-.message {
-  display: flex;
-  margin: 10px 0;
-  position: relative;
-  flex-direction: column;
-  align-items: center; /* center the whole message block */
+<meta charset="UTF-8" />
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messenger Chat Renderer</title>
+<style>
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+textarea#chatInput {
+  display: block;
+  width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 15px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1.5px solid #ccc;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  resize: vertical;
+  margin-bottom: 12px;
+  min-height: 100px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+textarea#chatInput:focus {
+  border-color: #0084ff;
+  box-shadow: 0 0 8px rgba(0, 132, 255, 0.5);
+  outline: none;
+}
+button#renderBtn {
+  border: none;
+  background-color: #0084ff;
+  color: white;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 132, 255, 0.3);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  min-width: 120px;
+}
+button#renderBtn:hover {
+  background-color: #006fcc;
+  box-shadow: 0 6px 10px rgba(0, 111, 204, 0.4);
+}
+button#renderBtn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.6);
 }
 
-    .me {
-      align-items: flex-end;
-    }
-
-    .oth {
-      align-items: flex-start;
-    }
-
-    .bubble {
-      padding: 10px 15px;
-      border-radius: 20px;
-      max-width: 70%;
-      font-size: 16px;
-      word-wrap: break-word;
-    }
-
-    .me .bubble {
-      background-color: #0084ff;
-      color: white;
-      border-bottom-right-radius: 2px;
-    }
-
-    .oth .bubble {
-      background-color: #f1f0f0;
-      color: black;
-      border-bottom-left-radius: 2px;
-    }
-
-    .seen {
-      font-size: 12px;
-      color: gray;
-      margin-top: 4px;
-      padding-left: 5px;
-    }
-
-    .me .seen {
-      text-align: right;
-      padding-right: 5px;
-    }
-  </style>
+body {
+font-family: Arial, sans-serif;
+background-color: #f0f2f5;
+margin: 0;
+padding: 20px;
+}
+button {
+border:none;
+}
+.chat-container {
+max-width: 600px;
+margin: 0 auto;
+background-color: #fff;
+padding: 10px;
+border-radius: 10px;
+box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.message {
+display: flex;
+margin: 10px 0;
+position: relative;
+flex-direction: column;
+align-items: center;
+}
+.me {
+align-items: flex-end;
+}
+.oth {
+align-items: flex-start;
+}
+.bubble {
+padding: 10px 15px;
+border-radius: 20px;
+max-width: 70%;
+font-size: 16px;
+word-wrap: break-word;
+white-space: pre-wrap;
+}
+.me .bubble {
+background-color: #0084ff;
+color: white;
+border-bottom-right-radius: 2px;
+}
+.oth .bubble {
+background-color: #f1f0f0;
+color: black;
+border-bottom-left-radius: 2px;
+}
+.seen {
+font-size: 12px;
+color: gray;
+margin-top: 4px;
+padding-left: 5px;
+}
+.me .seen {
+text-align: right;
+padding-right: 5px;
+}
+</style>
 </head>
 <body>
-  <div id="chat" class="chat-container"></div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script>
-    function parseChatFromURLPath() {
-      const path = decodeURIComponent(window.location.pathname);
-      const cleaned = path
-        .replace(/^\/+/, "")
-        .replace(/^seen\/?/, "")
-        .trim();
-
-      const pattern = /(me|oth)\.([\s\S]*?)(?=(?:me\.|oth\.|$))/gi;
-      const matches = [...cleaned.matchAll(pattern)];
-
-      return matches.map(match => {
-        const who = match[1].toLowerCase();
-        const msg = match[2].trim();
-        return { who, msg };
-      }).filter(entry => entry.msg.length > 0);
-    }
-
-    function renderChat(messages) {
-      const container = document.getElementById("chat");
-
-      container.innerHTML = messages.map((msg, i) => {
-        const isLast = i === messages.length - 1;
-        return (
-          `<div class="message ${msg.who}">
-            <div class="bubble">${msg.msg}</div>
-            ${isLast ? '<div class="seen">Seen by Selhue</div>' : ''}
-          </div>`
-        );
-      }).join("");
-    }
-
-    function downloadChatImage() {
-      const chatDiv = document.getElementById("chat");
-
-      html2canvas(chatDiv).then(canvas => {
-        const link = document.createElement("a");
-        link.download = "chat.png";
-        link.href = canvas.toDataURL();
-        link.click();
-        setTimeout(() => window.close(), 1000);
-      });
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const messages = parseChatFromURLPath();
-      if (messages.length) {
-        renderChat(messages);
-        setTimeout(downloadChatImage, 300);
-      }
-    });
-  </script>
+<div id="chat" class="chat-container"></div>
+<div style="max-width:600px; margin: 20px auto; text-align:center;">
+<textarea id="chatInput" rows="4" style="width:100%; font-family: monospace;" placeholder="Enter chat text here (e.g. me.Hello oth.Hi me.How are you?)"></textarea>
+<button id="renderBtn" style="margin-top:10px; padding: 8px 16px; font-size: 16px;">Render Chat</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const defaultSample = [
+{ who: "me", msg: "Hey, how are you?" },
+{ who: "oth", msg: "I'm good, thanks! How about you?" },
+{ who: "me", msg: "Doing well, just working on a project." },
+{ who: "oth", msg: "Nice! Good luck with that." }
+];
+function parseChatFromText(text) {
+const cleaned = text.trim();
+const pattern = /(me|oth)\.([\s\S]*?)(?=(?:me\.|oth\.|$))/gi;
+const matches = [...cleaned.matchAll(pattern)];
+return matches.map(match => {
+const who = match[1].toLowerCase();
+const msg = match[2].trim();
+return { who, msg };
+}).filter(entry => entry.msg.length > 0);
+}
+function escapeHtml(text) {
+return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function renderChat(messages) {
+const container = document.getElementById("chat");
+container.innerHTML = messages.map((msg, i) => {
+const isLast = i === messages.length - 1;
+const safeMsg = escapeHtml(msg.msg).replace(/\n/g, "<br>");
+return (
+`<div class="message ${msg.who}">
+<div class="bubble">${safeMsg}</div>
+${isLast ? '<div class="seen">Seen by Selhue</div>' : ''}
+</div>`
+);
+}).join("");
+}
+function downloadChatImage() {
+const chatDiv = document.getElementById("chat");
+html2canvas(chatDiv).then(canvas => {
+const link = document.createElement("a");
+link.download = "chat.png";
+link.href = canvas.toDataURL();
+link.click();
+setTimeout(() => window.close(), 1000);
+});
+}
+function parseChatFromURLPath() {
+const path = decodeURIComponent(window.location.pathname);
+const cleaned = path
+.replace(/^\/+/, "")
+.replace(/^seen\/?/, "")
+.trim();
+if (!cleaned) return [];
+return parseChatFromText(cleaned);
+}
+function init() {
+const messages = parseChatFromURLPath();
+if (messages.length) {
+renderChat(messages);
+setTimeout(downloadChatImage, 300);
+} else {
+renderChat(defaultSample);
+}
+}
+window.addEventListener("DOMContentLoaded", () => {
+init();
+document.getElementById("renderBtn").addEventListener("click", () => {
+const inputText = document.getElementById("chatInput").value;
+if (!inputText.trim()) {
+alert("Please enter chat text in the textarea.");
+return;
+}
+const messages = parseChatFromText(inputText);
+if (messages.length === 0) {
+alert("No valid messages found. Use format like: me.Hello oth.Hi");
+return;
+}
+renderChat(messages);
+setTimeout(downloadChatImage, 300);
+});
+});
+</script>
 </body>
 </html>
