@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docs Renderer</title>
+<style>
+:root {
+  --bg: #18191a;
+  --doc-bg: #242526;
+  --text: #e4e6eb;
+  --heading: #61dafb;
+  --button-bg: #0084ff;
+  --button-color: white;
+  --button-shadow: rgba(0, 132, 255, 0.3);
+  --button-hover-bg: #006fcc;
+  --button-hover-shadow: rgba(0, 111, 204, 0.4);
+  --button-focus-shadow: rgba(0, 132, 255, 0.6);
+  --input-border: #ccc;
+  --input-shadow: rgba(0,0,0,0.1);
+  --input-focus-border: #0084ff;
+  --input-focus-shadow: rgba(0, 132, 255, 0.5);
+}
+body.light {
+  --bg: #f0f2f5;
+  --doc-bg: #fff;
+  --text: #222;
+  --heading: #0074d9;
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--bg);
+}
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  min-height: 100vh;
+  padding: 20px;
+  background-attachment: fixed;
+  transition: background-color 0.3s ease;
+  color: var(--text);
+}
+button {
+  border: none;
+  background-color: var(--button-bg);
+  color: var(--button-color);
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px var(--button-shadow);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+button:hover {
+  background-color: var(--button-hover-bg);
+  box-shadow: 0 6px 10px var(--button-hover-shadow);
+}
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--button-focus-shadow);
+}
+textarea#docInput {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box; /* Fix overlap */
+  font-family: inherit;
+  font-size: 15px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--input-border);
+  box-shadow: inset 0 1px 3px var(--input-shadow);
+  resize: vertical;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  min-height: 100px;
+  margin-bottom: 12px;
+  background-color: var(--doc-bg);
+  color: var(--text);
+}
+textarea#docInput:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 8px var(--input-focus-shadow);
+  outline: none;
+}
+.doc-container {
+  max-width: 700px;
+  margin: 0 auto;
+  background-color: var(--doc-bg);
+  padding: 32px 32px 24px 32px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  transition: background-color 0.3s ease;
+  overflow: hidden;
+}
+.doc-container p {
+  margin: 0 0 1.2em 0;
+  line-height: 1.7;
+  font-size: 1.09em;
+}
+.doc-container h1,
+.doc-container h2,
+.doc-container h3 {
+  color: var(--heading);
+  margin-top: 1.5em;
+  margin-bottom: 0.7em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.doc-container h1 { font-size: 2.1em; }
+.doc-container h2 { font-size: 1.6em; }
+.doc-container h3 { font-size: 1.25em; }
+.toggle-mode {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  padding: 8px 18px;
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background 0.3s, color 0.3s;
+}
+.toggle-mode.light-state {
+  background: #f0f2f5;
+  color: #222;
+}
+</style>
+</head>
+<body>
+<button class="toggle-mode" id="toggleModeBtn" aria-pressed="false">☀️ Light Mode</button>
+<div id="doc" class="doc-container"></div>
+<div style="max-width:700px; margin: 20px auto; text-align:center;">
+  <textarea id="docInput" rows="6" placeholder="Enter your document text here. Use # for headings, *bold*, _italic_, ~underline~."></textarea>
+  <button id="renderBtn">Render Doc</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// Default sample doc
+const defaultSample = [
+  "# My Project Documentation",
+  "",
+  "Welcome to your minimalist Docs renderer.",
+  "",
+  "## Features",
+  "",
+  "* Clean, modern UI with dark/light mode.",
+  "* Supports headings, paragraphs, and basic formatting.",
+  "",
+  "## Formatting",
+  "",
+  "Use *bold*, _italic_, and ~underline~ in your text."
+];
+
+// Parse text to doc lines, supporting headings and formatting
+function parseDocFromText(text) {
+  return text.trim().split(/\r?\n/);
+}
+
+// Very basic markdown-like formatting for bold, italic, underline
+function formatText(line) {
+  let html = line
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\*([^\*]+)\*/g, "<b>$1</b>")
+    .replace(/_([^_]+)_/g, "<i>$1</i>")
+    .replace(/~([^~]+)~/g, "<u>$1</u>");
+  return html;
+}
+
+function renderDoc(lines) {
+  const container = document.getElementById("doc");
+  let html = "";
+  lines.forEach(line => {
+    if (/^###\s*(.+)/.test(line)) {
+      html += `<h3>${formatText(RegExp.$1)}</h3>`;
+    } else if (/^##\s*(.+)/.test(line)) {
+      html += `<h2>${formatText(RegExp.$1)}</h2>`;
+    } else if (/^#\s*(.+)/.test(line)) {
+      html += `<h1>${formatText(RegExp.$1)}</h1>`;
+    } else if (line.trim() === "") {
+      html += `<p style="margin:0.5em 0;"></p>`;
+    } else {
+      html += `<p>${formatText(line)}</p>`;
+    }
+  });
+  container.innerHTML = html;
+}
+
+function downloadDocImage() {
+  const docDiv = document.getElementById("doc");
+  html2canvas(docDiv).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "doc.png";
+    link.href = canvas.toDataURL();
+    link.click();
+    setTimeout(() => window.close(), 1000);
+  });
+}
+
+function parseDocFromURLPath() {
+  const path = decodeURIComponent(window.location.pathname);
+  const cleaned = path.replace(/^\/+/, "").replace(/^seen\/?/, "").trim();
+  if (!cleaned) return [];
+  return parseDocFromText(cleaned);
+}
+
+function init() {
+  const lines = parseDocFromURLPath();
+  if (lines.length) {
+    renderDoc(lines);
+    setTimeout(downloadDocImage, 300);
+  } else {
+    renderDoc(defaultSample);
+  }
+}
+window.addEventListener("DOMContentLoaded", () => {
+  init();
+  document.getElementById("renderBtn").addEventListener("click", () => {
+    const inputText = document.getElementById("docInput").value;
+    if (!inputText.trim()) {
+      alert("Please enter document text in the textarea.");
+      return;
+    }
+    const lines = parseDocFromText(inputText);
+    if (lines.length === 0) {
+      alert("No valid lines found.");
+      return;
+    }
+    renderDoc(lines);
+    setTimeout(downloadDocImage, 300);
+  });
+  const toggleBtn = document.getElementById('toggleModeBtn');
+  toggleBtn.addEventListener('click', function() {
+    const isLight = document.body.classList.toggle('light');
+    toggleBtn.classList.toggle('light-state', isLight);
+    toggleBtn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+    toggleBtn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+  });
+});
+</script>
+</body>
+</html>
